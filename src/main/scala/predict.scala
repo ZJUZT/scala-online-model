@@ -36,7 +36,9 @@ object predict {
     var field_info = Array(29, 33, 34, 35, 51, 201, 351, 501, 651, 801, 951, 1101, 1251, 1301, 1601, 1636, 1731, 1801, 1950)
 
     // load fm embedding and nn for each anchor point
+    var tmp: Array[Array[Int]] = Array(Array(1,2,3))
+    tmp = tmp :+ Array(2,3)
 
-    println("hello")
+    print(tmp(1)(0))
   }
 }
