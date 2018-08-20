@@ -58,6 +58,8 @@ object predict {
       table_name(i) = "data/deep_fm_" + i
     }
 
+    var LL_Deep_FM = new Array[DeepFm](num_anchor)
+
     for (i <- table_name.indices){
       var lines = Source.fromFile(table_name(i)).getLines()
       // anchor point
@@ -94,20 +96,55 @@ object predict {
       }
 
       // input layer weight
-      var input_layer_weight = ofDim[Double](field_info.length * embedding_size)
+      var input_layer_weight = ofDim[Double](field_info.length*embedding_size, input_width)
+
+      var line = lines.next()
+
+      tokens = line.split(" ")
+
+      for(i <- tokens.indices){
+        input_layer_weight(i / input_width)(i % input_width) = tokens(i).toDouble
+      }
 
       // input layer bias
       var input_layer_bias = new Array[Double](input_width)
+      line = lines.next()
+      tokens = line.split(" ")
+
+      for(i <- tokens.indices){
+        input_layer_bias(i) = tokens(i).toDouble
+      }
 
       // hidden layer weight
       var hidden_layer_weight = ofDim[Double](input_width, hidden_width)
+      line = lines.next()
+      tokens = line.split(" ")
+
+      for(i <- tokens.indices){
+        hidden_layer_weight(i / hidden_width)(i % hidden_width) = tokens(i).toDouble
+      }
 
       // hidden layer bias
       var hidden_layer_bias = new Array[Double](hidden_width)
+      line = lines.next()
+      tokens = line.split(" ")
 
+      for(i <- tokens.indices){
+        hidden_layer_bias(i) = tokens(i).toDouble
+      }
+
+      val deep_fm = new DeepFm(anchor = ap,
+        fm_embedding=fm_embedding.toArray,
+        fm_bias = fm_bias,
+        input_layer_weight = input_layer_weight,
+        input_layer_bias = input_layer_bias,
+        hidden_layer_weight = hidden_layer_weight,
+        hidden_layer_bias = hidden_layer_bias
+      )
+
+      LL_Deep_FM(i) = deep_fm
 
     }
-
 
   }
 }

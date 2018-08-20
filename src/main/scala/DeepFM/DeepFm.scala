@@ -11,7 +11,7 @@ import scala.Array._
   * @param hidden_layer_weight deep part hidden layer weights
   */
 class DeepFm (anchor:Array[Double],
-              fm_embedding:Array[Array[Array[Double]]],
+              fm_embedding:Array[Any],
               fm_bias: Double,
               input_layer_weight:Array[Array[Double]],
               input_layer_bias:Array[Double],
@@ -25,6 +25,7 @@ class DeepFm (anchor:Array[Double],
 //  var this.hidden_layer:Array[Array[Double]] = hidden_layer
 //  var this.hidden_layer_bias:Array[Double] = hidden_layer_bias
 
+  // cast fm embedding
 
   /**
     * predict model
@@ -48,8 +49,9 @@ class DeepFm (anchor:Array[Double],
 
       for (j <- xi_field.indices){
         for (k <- 0 until embedding_size){
+          var field_embedding = fm_embedding(i).asInstanceOf[Array[Array[Double]]]
           fm_second_order_embedding(i)(j) = fm_second_order_embedding(i)(j) +
-            fm_embedding(i)(xi_field(j))(k) * xv_field(j)
+            field_embedding(xi_field(j))(k) * xv_field(j)
         }
       }
     }
