@@ -4,7 +4,6 @@ package DeepFM
 import scala.Array._
 import scala.collection.mutable.ArrayBuffer
 /**
-  *
   * init trained deep_fm model
   * @param anchor the anchor point
   * @param fm_embedding fm second embedding
@@ -39,7 +38,7 @@ class DeepFm (anchor:Array[Double],
 
     // calculate weight
     var square_sum = 0.0
-    for(i <- 0 to num_feature){
+    for(i <- 0 until num_feature){
       square_sum = square_sum + (feature_dense(i) - anchor(i)) * (feature_dense(i) - anchor(i))
     }
 
@@ -65,6 +64,7 @@ class DeepFm (anchor:Array[Double],
         }
 
         field_v += value(feature_index)
+        feature_index += 1
       }
 
       xi(field_index) = field_i.toArray
@@ -101,15 +101,16 @@ class DeepFm (anchor:Array[Double],
     val embedding_size = 4
     var fm_second_order_embedding = ofDim[Double](fields_num, embedding_size)
 
-    for (i <- 0 to fm_embedding.length){
+    for (i <- fm_embedding.indices){
       val xi_field = xi(i)
       val xv_field = xv(i)
 
       for (j <- xi_field.indices){
         for (k <- 0 until embedding_size){
           var field_embedding = fm_embedding(i).asInstanceOf[Array[Array[Double]]]
-          fm_second_order_embedding(i)(j) = fm_second_order_embedding(i)(j) +
-            field_embedding(xi_field(j))(k) * xv_field(j)
+          var tmp = field_embedding(xi_field(j))(k) * xv_field(j)
+          fm_second_order_embedding(i)(k) = fm_second_order_embedding(i)(k) + tmp
+
         }
       }
     }
@@ -123,9 +124,9 @@ class DeepFm (anchor:Array[Double],
     var fm_sum_square = 0.0
 
 
-    for (i <- 0 to embedding_size){
+    for (i <- 0 until embedding_size){
       var tmp = 0.0
-      for (j <- 0 to fm_embedding.length){
+      for (j <- 0 until fm_embedding.length){
         fm_square_sum = fm_square_sum + (fm_second_order_embedding(j)(i) * fm_second_order_embedding(j)(i))
         tmp += fm_second_order_embedding(j)(i)
       }
@@ -137,7 +138,7 @@ class DeepFm (anchor:Array[Double],
     /*
     concat field fm embedding as deep part input
      */
-    var deep_input = Array[Double](fields_num * embedding_size)
+    var deep_input = new Array[Double](fields_num * embedding_size)
     for (i <- fm_embedding.indices){
       for (j <-0 until embedding_size){
         deep_input(i * embedding_size + j) = fm_second_order_embedding(i)(j)

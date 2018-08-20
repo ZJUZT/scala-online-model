@@ -26,6 +26,7 @@ import scala.collection.mutable.ArrayBuffer
 object predict {
 
   // field dict
+  val num_feature = 1935
   val field_info = Array(29, 33, 34, 35, 51, 201, 351, 501, 651, 801, 951, 1101, 1251, 1301, 1601, 1636, 1731, 1801, 1950)
 
   def main(args: Array[String]): Unit = {
@@ -70,7 +71,7 @@ object predict {
       var fm_bias = lines.next().toDouble
 
       // fm embedding
-      var fm_embedding = new ArrayBuffer[Any]()
+      var fm_embedding = new Array[Any](field_info.length)
       for (i <- field_info.indices){
         var rows = 0
         if (i==0){
@@ -87,7 +88,7 @@ object predict {
           field_embedding(i / embedding_size)(i % embedding_size) = value(i).toDouble
         }
 
-        fm_embedding = fm_embedding ++ field_embedding
+        fm_embedding(i) = field_embedding
 
       }
 
@@ -130,7 +131,7 @@ object predict {
       }
 
       val deep_fm = new DeepFm(anchor = ap,
-        fm_embedding=fm_embedding.toArray,
+        fm_embedding=fm_embedding,
         fm_bias = fm_bias,
         input_layer_weight = input_layer_weight,
         input_layer_bias = input_layer_bias,
@@ -140,6 +141,48 @@ object predict {
 
       LL_Deep_FM(i) = deep_fm
 
+    }
+
+    // make predictions
+    for(line <- Source.fromFile("data/71_test.libsvm").getLines()){
+      var index = new ArrayBuffer[Int]()
+      var value = new ArrayBuffer[Double]()
+
+      var tokens = line.split(" |\\t|\\n")
+
+      for(i <- 1 until tokens.length){
+        var pair = tokens(i).split(":")
+        if (pair.length == 2){
+          if((pair(0) != "")&&(pair(1) != "")){
+            if(pair(0).toInt < num_feature){
+              index += pair(0).toInt
+              value += pair(1).toDouble
+            }
+          }
+        }
+      }
+
+      var ll_weights = new Array[Double](num_anchor)
+      val ll_scores = new Array[Double](num_anchor)
+
+      for(i <- LL_Deep_FM.indices){
+        var res = LL_Deep_FM(i).predict(index.toArray, value.toArray)
+        ll_scores(i) = res(0)
+        ll_weights(i) = res(1)
+      }
+
+      var sum_weight = 0.0
+      for(i <- LL_Deep_FM.indices){
+        sum_weight = sum_weight + ll_weights(i)
+      }
+
+      var final_score = 0.0
+      for(i <- LL_Deep_FM.indices){
+        final_score = final_score + ll_scores(i) * ll_weights(i)
+      }
+
+      final_score = final_score/sum_weight
+      println(final_score)
     }
 
   }
