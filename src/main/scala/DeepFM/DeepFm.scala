@@ -2,6 +2,7 @@
 package DeepFM
 
 import scala.Array._
+import scala.collection.mutable.ArrayBuffer
 /**
   *
   * init trained deep_fm model
@@ -17,23 +18,80 @@ class DeepFm (anchor:Array[Double],
               input_layer_bias:Array[Double],
               hidden_layer_weight:Array[Array[Double]],
               hidden_layer_bias:Array[Double]) {
-//  var this.anchor: Array[Double] = anchor
-//  var this.fm_embedding:Array[Array[Array[Double]]] = fm_embedding
-//  var this.fm_bias: Array[Double] = fm_bias
-//  var this.input_layer:Array[Array[Double]] = input_layer
-//  var this.input_layer_bias:Array[Double] = input_layer_bias
-//  var this.hidden_layer:Array[Array[Double]] = hidden_layer
-//  var this.hidden_layer_bias:Array[Double] = hidden_layer_bias
 
-  // cast fm embedding
+  // field dict
+  val field_info = Array(29, 33, 34, 35, 51, 201, 351, 501, 651, 801, 951, 1101, 1251, 1301, 1601, 1636, 1731, 1801, 1950)
+  // feature number
+  val num_feature = 1935
+
+  val c = 0.01
+  /**
+    * convert origin sample into field index representation
+    * @param index index in libsvm file
+    * @param value corresponding value
+    * @return weight and corresponding value
+    */
+  def predict(index: Array[Int], value: Array[Double]): Array[Double] = {
+    var feature_dense = new Array[Double](num_feature)
+    for(i <- index.indices){
+      feature_dense(index(i)) = value(i)
+    }
+
+    // calculate weight
+    var square_sum = 0.0
+    for(i <- 0 to num_feature){
+      square_sum = square_sum + (feature_dense(i) - anchor(i)) * (feature_dense(i) - anchor(i))
+    }
+
+    var weight = math.exp(-c * square_sum)
+
+    // construct field input
+    var xi = new Array[Array[Int]](field_info.length)
+    var xv = new Array[Array[Double]](field_info.length)
+
+    var field_index = 0
+    var feature_index = 0
+
+    var field_i = new ArrayBuffer[Int]()
+    var field_v = new ArrayBuffer[Double]()
+
+    while (field_index < field_info.length){
+      while(feature_index < index.length && index(feature_index) < field_info(field_index)){
+        if(field_index == 0){
+          field_i += index(feature_index)
+        }
+        else{
+          field_i += (index(feature_index) - field_info(field_index - 1))
+        }
+
+        field_v += value(feature_index)
+      }
+
+      xi(field_index) = field_i.toArray
+      xv(field_index) = field_v.toArray
+      field_index = field_index + 1
+
+      field_i = new ArrayBuffer[Int]()
+      field_v = new ArrayBuffer[Double]()
+    }
+
+    // calculate weight
+    var score = predict_(xi, xv)
+
+    var res = Array[Double](score, weight)
+
+    res
+  }
+
 
   /**
     * predict model
     * @param xi non-zero index for each field
     * @param xv corresponding value
-    * @return predict score
+    * @return predict score and corresponding weight
     */
-  def predict(xi:Array[Array[Int]], xv:Array[Array[Double]]): Double = {
+
+  def predict_(xi:Array[Array[Int]], xv:Array[Array[Double]]): Double = {
 
     /*
     calculate fm embedding
@@ -131,9 +189,9 @@ class DeepFm (anchor:Array[Double],
     // sum fm and deep output
     // then sigmoid
 
-    var predict_prob = 1/(1+math.exp(-(fm_output + deep_output)))
+    val predict_prob = 1 / (1 + math.exp(-(fm_output + deep_output)))
 
-    return predict_prob
+    predict_prob
 
   }
 }

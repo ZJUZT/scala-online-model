@@ -25,6 +25,9 @@ import scala.collection.mutable.ArrayBuffer
 
 object predict {
 
+  // field dict
+  val field_info = Array(29, 33, 34, 35, 51, 201, 351, 501, 651, 801, 951, 1101, 1251, 1301, 1601, 1636, 1731, 1801, 1950)
+
   def main(args: Array[String]): Unit = {
     // num of anchor points
     val num_anchor = 20
@@ -37,14 +40,7 @@ object predict {
 
     val hidden_width = 32
 
-    // feature number
-    val num_feature = 1935
-
-    val c = 0.01
     val embedding_size = 4
-
-    // field dict
-    val field_info = Array(29, 33, 34, 35, 51, 201, 351, 501, 651, 801, 951, 1101, 1251, 1301, 1601, 1636, 1731, 1801, 1950)
 
     // fm embedding length
     /*
