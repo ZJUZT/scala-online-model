@@ -2,12 +2,15 @@
   * This object is for locally linear deep factorization machines inference
  */
 
+
 import org.apache.spark.rdd.RDD
 
 import scala.io._
-import DeepFM.DeepFm
-import scala.Array._
+import java.io._
 
+import DeepFM.DeepFm
+
+import scala.Array._
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -26,22 +29,22 @@ import scala.collection.mutable.ArrayBuffer
 object predict {
 
   // field dict
-  val num_feature = 1935
-  val field_info = Array(29, 33, 34, 35, 51, 201, 351, 501, 651, 801, 951, 1101, 1251, 1301, 1601, 1636, 1731, 1801, 1950)
+  var field_info = Array(50, 60, 70, 80, 90, 100, 120)
+  val num_feature = 119
+  // num of anchor points
+  val num_anchor = 100
+
+  // num of nearest neighbours
+  val num_nn = 8
+
+  // deep layer
+  val input_width = 32
+
+  val hidden_width = 32
+
+  val embedding_size = 4
 
   def main(args: Array[String]): Unit = {
-    // num of anchor points
-    val num_anchor = 20
-
-    // num of nearest neighbours
-    val num_nn = 3
-
-    // deep layer
-    val input_width = 32
-
-    val hidden_width = 32
-
-    val embedding_size = 4
 
     // fm embedding length
     /*
@@ -56,6 +59,7 @@ object predict {
     }
 
     var LL_Deep_FM = new Array[DeepFm](num_anchor)
+    var writer = new PrintWriter(new File("data/ll_deep_fm.res"))
 
     for (i <- table_name.indices){
       var lines = Source.fromFile(table_name(i)).getLines()
@@ -144,14 +148,14 @@ object predict {
     }
 
     // make predictions
-    for(line <- Source.fromFile("data/71_test.libsvm").getLines()){
+    for(line <- Source.fromFile("data/0820_116_test.libsvm").getLines()){
       var index = new ArrayBuffer[Int]()
       var value = new ArrayBuffer[Double]()
 
-      var tokens = line.split(" |\\t|\\n")
+      val tokens = line.split(" |\\t|\\n")
 
-      for(i <- 1 until tokens.length){
-        var pair = tokens(i).split(":")
+      for(i <- 2 until tokens.length){
+        val pair = tokens(i).split(":")
         if (pair.length == 2){
           if((pair(0) != "")&&(pair(1) != "")){
             if(pair(0).toInt < num_feature){
@@ -162,28 +166,35 @@ object predict {
         }
       }
 
-      var ll_weights = new Array[Double](num_anchor)
-      val ll_scores = new Array[Double](num_anchor)
+      val ll_weights = new Array[Double](num_anchor)
 
+      // calculate all the weights and sort
       for(i <- LL_Deep_FM.indices){
-        var res = LL_Deep_FM(i).predict(index.toArray, value.toArray)
-        ll_scores(i) = res(0)
-        ll_weights(i) = res(1)
+        ll_weights(i) = LL_Deep_FM(i).get_weight(index.toArray, value.toArray)
+      }
+
+      val (ll_weights_sorted, indices) = ll_weights.zipWithIndex.sorted.unzip
+
+      // calculate the nearest neighbour deep fm result
+      val ll_scores = new Array[Double](num_nn)
+      for(i <- 0 until num_nn){
+        ll_scores(i) = LL_Deep_FM(indices(num_anchor - 1 - i)).predict(index.toArray, value.toArray)
       }
 
       var sum_weight = 0.0
-      for(i <- LL_Deep_FM.indices){
-        sum_weight = sum_weight + ll_weights(i)
-      }
-
       var final_score = 0.0
-      for(i <- LL_Deep_FM.indices){
-        final_score = final_score + ll_scores(i) * ll_weights(i)
+
+      for(i <- 0 until num_nn){
+        final_score = final_score + ll_scores(i) * ll_weights_sorted(num_anchor - 1 - i)
+        sum_weight = sum_weight + ll_weights_sorted(num_anchor - 1 - i)
       }
 
       final_score = final_score/sum_weight
-      println(final_score)
+      writer.write(final_score.toString)
+      writer.write("\n")
     }
+
+    writer.close()
 
   }
 }
