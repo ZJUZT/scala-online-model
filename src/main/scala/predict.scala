@@ -44,6 +44,8 @@ object predict {
 
   val embedding_size = 4
 
+  var smooth_ratio = 1e-1
+
   def main(args: Array[String]): Unit = {
 
     // fm embedding length
@@ -189,7 +191,10 @@ object predict {
         sum_weight = sum_weight + ll_weights_sorted(num_anchor - 1 - i)
       }
 
-      final_score = final_score/sum_weight
+      final_score = final_score/(sum_weight + smooth_ratio)
+
+      // do sigmoid
+      final_score = 1 / (1 + math.exp(-final_score))
       writer.write(final_score.toString)
       writer.write("\n")
     }

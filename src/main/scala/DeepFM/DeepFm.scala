@@ -26,7 +26,7 @@ class DeepFm (anchor:Array[Double],
   var fields_num = 7
   var embedding_size = 4
 
-  val c = 1
+  val c = 1e3
   val drop_out_ratio = 0.5
 
   /**
@@ -197,11 +197,9 @@ class DeepFm (anchor:Array[Double],
     }
 
     // sum fm and deep output
-    // then sigmoid
 
-    val predict_prob = 1 / (1 + math.exp(-(fm_output + deep_output)))
-
-    predict_prob
+    val res = fm_output + deep_output
+    res
 
   }
 }
