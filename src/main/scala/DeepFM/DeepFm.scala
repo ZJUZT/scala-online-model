@@ -116,8 +116,8 @@ class DeepFm (anchor:Array[Double],
 
       for (j <- xi_field.indices){
         for (k <- 0 until embedding_size){
-          var field_embedding = fm_embedding(i).asInstanceOf[Array[Array[Double]]]
-          var tmp = field_embedding(xi_field(j))(k) * xv_field(j)
+          val field_embedding = fm_embedding(i).asInstanceOf[Array[Array[Double]]]
+          val tmp = field_embedding(xi_field(j))(k) * xv_field(j)
           fm_second_order_embedding(i)(k) = fm_second_order_embedding(i)(k) + tmp
 
         }
@@ -166,9 +166,9 @@ class DeepFm (anchor:Array[Double],
     var input_layer_output = new Array[Double](input_width)
     for (i <-0 until input_width){
       for (j <- 0 until fm_width){
-        input_layer_output(i) = deep_input(j) * input_layer_weight(j)(i)
+        input_layer_output(i) = input_layer_output(i) + deep_input(j) * input_layer_weight(i)(j)
       }
-      input_layer_output(i) += input_layer_bias(i)
+      input_layer_output(i) = input_layer_output(i) + input_layer_bias(i)
       // relu
       if(input_layer_output(i) < 0){
         input_layer_output(i) = 0
@@ -180,7 +180,7 @@ class DeepFm (anchor:Array[Double],
     // hidden to output
     for (i <- 0 until hidden_width){
       for (j <- 0 until input_width){
-        hidden_layer_output(i) = input_layer_output(j) * hidden_layer_weight(j)(i)
+        hidden_layer_output(i) = hidden_layer_output(i) + input_layer_output(j) * hidden_layer_weight(i)(j)
       }
       hidden_layer_output(i) += hidden_layer_bias(i)
 

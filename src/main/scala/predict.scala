@@ -99,14 +99,15 @@ object predict {
       }
 
       // input layer weight
-      var input_layer_weight = ofDim[Double](field_info.length*embedding_size, input_width)
+      val fm_layer_width = field_info.length*embedding_size
+      val input_layer_weight = ofDim[Double](input_width, fm_layer_width)
 
       var line = lines.next()
 
       tokens = line.split(" ")
 
       for(i <- tokens.indices){
-        input_layer_weight(i / input_width)(i % input_width) = tokens(i).toDouble
+        input_layer_weight(i / fm_layer_width)(i % fm_layer_width) = tokens(i).toDouble
       }
 
       // input layer bias
@@ -119,12 +120,12 @@ object predict {
       }
 
       // hidden layer weight
-      var hidden_layer_weight = ofDim[Double](input_width, hidden_width)
+      var hidden_layer_weight = ofDim[Double](hidden_width, input_width)
       line = lines.next()
       tokens = line.split(" ")
 
       for(i <- tokens.indices){
-        hidden_layer_weight(i / hidden_width)(i % hidden_width) = tokens(i).toDouble
+        hidden_layer_weight(i / input_width)(i % input_width) = tokens(i).toDouble
       }
 
       // hidden layer bias
@@ -156,12 +157,12 @@ object predict {
 
       val tokens = line.split(" |\\t|\\n")
 
-      for(i <- 2 until tokens.length){
+      for(i <- 1 until tokens.length){
         val pair = tokens(i).split(":")
         if (pair.length == 2){
           if((pair(0) != "")&&(pair(1) != "")){
             if(pair(0).toInt < num_feature){
-              index += pair(0).toInt
+              index += (pair(0).toInt - 1)
               value += pair(1).toDouble
             }
           }
@@ -180,7 +181,8 @@ object predict {
       // calculate the nearest neighbour deep fm result
       val ll_scores = new Array[Double](num_nn)
       for(i <- 0 until num_nn){
-        ll_scores(i) = LL_Deep_FM(indices(num_anchor - 1 - i)).predict(index.toArray, value.toArray)
+        val model_idx = indices(num_anchor - 1 - i)
+        ll_scores(i) = LL_Deep_FM(model_idx).predict(index.toArray, value.toArray)
       }
 
       var sum_weight = 0.0
